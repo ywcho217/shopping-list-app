@@ -247,10 +247,13 @@
     </ul>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const STORAGE_KEY = "shopping-list-v1";
+    const SUPABASE_URL = "https://qnzgokfhsghlewvoglso.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuemdva2Zoc2dobGV3dm9nbHNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MDA0ODMsImV4cCI6MjA5Njk3NjQ4M30.MWPprXGqydjSgYrydhSYQi85ltc6AtSDr2TgIvOcffc";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    let items = [];
 
     const listEl = document.getElementById("list");
     const inputEl = document.getElementById("item-input");
@@ -259,8 +262,15 @@
     const subtitleEl = document.getElementById("subtitle");
     const clearCheckedBtn = document.getElementById("clear-checked-btn");
 
-    function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    async function loadItems() {
+      const { data, error } = await supabaseClient
+        .from("shopping_items")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error) {
+        items = data;
+        render();
+      }
     }
 
     function render() {
@@ -273,28 +283,32 @@
             아직 항목이 없어요
           </li>`;
       } else {
-        items.forEach((item, idx) => {
+        items.forEach((item) => {
           const li = document.createElement("li");
           li.className = "list-item" + (item.checked ? " checked" : "");
 
           li.innerHTML = `
             <div class="checkbox"></div>
             <span class="text">${escapeHtml(item.text)}</span>
-            <button class="delete-btn" title="삭제" data-idx="${idx}">×</button>
+            <button class="delete-btn" title="삭제">×</button>
           `;
 
-          li.addEventListener("click", (e) => {
+          li.addEventListener("click", async (e) => {
             if (e.target.closest(".delete-btn")) return;
-            items[idx].checked = !items[idx].checked;
-            save();
-            render();
+            await supabaseClient
+              .from("shopping_items")
+              .update({ checked: !item.checked })
+              .eq("id", item.id);
+            await loadItems();
           });
 
-          li.querySelector(".delete-btn").addEventListener("click", (e) => {
+          li.querySelector(".delete-btn").addEventListener("click", async (e) => {
             e.stopPropagation();
-            items.splice(idx, 1);
-            save();
-            render();
+            await supabaseClient
+              .from("shopping_items")
+              .delete()
+              .eq("id", item.id);
+            await loadItems();
           });
 
           listEl.appendChild(li);
@@ -315,14 +329,13 @@
       clearCheckedBtn.style.display = checked > 0 ? "inline-block" : "none";
     }
 
-    function addItem() {
+    async function addItem() {
       const text = inputEl.value.trim();
       if (!text) return;
-      items.unshift({ text, checked: false });
-      save();
-      render();
+      await supabaseClient.from("shopping_items").insert({ text, checked: false });
       inputEl.value = "";
       inputEl.focus();
+      await loadItems();
     }
 
     function escapeHtml(str) {
@@ -338,13 +351,15 @@
       if (e.key === "Enter") addItem();
     });
 
-    clearCheckedBtn.addEventListener("click", () => {
-      items = items.filter((i) => !i.checked);
-      save();
-      render();
+    clearCheckedBtn.addEventListener("click", async () => {
+      await supabaseClient
+        .from("shopping_items")
+        .delete()
+        .eq("checked", true);
+      await loadItems();
     });
 
-    render();
+    loadItems();
   </script>
 </body>
 </html>
