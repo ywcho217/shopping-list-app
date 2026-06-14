@@ -251,7 +251,7 @@
   <script>
     const SUPABASE_URL = "https://qnzgokfhsghlewvoglso.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuemdva2Zoc2dobGV3dm9nbHNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MDA0ODMsImV4cCI6MjA5Njk3NjQ4M30.MWPprXGqydjSgYrydhSYQi85ltc6AtSDr2TgIvOcffc";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let items = [];
 
@@ -263,7 +263,7 @@
     const clearCheckedBtn = document.getElementById("clear-checked-btn");
 
     async function loadItems() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("shopping_items")
         .select("*")
         .order("created_at", { ascending: false });
@@ -295,7 +295,7 @@
 
           li.addEventListener("click", async (e) => {
             if (e.target.closest(".delete-btn")) return;
-            await supabase
+            await supabaseClient
               .from("shopping_items")
               .update({ checked: !item.checked })
               .eq("id", item.id);
@@ -304,7 +304,7 @@
 
           li.querySelector(".delete-btn").addEventListener("click", async (e) => {
             e.stopPropagation();
-            await supabase
+            await supabaseClient
               .from("shopping_items")
               .delete()
               .eq("id", item.id);
@@ -332,7 +332,7 @@
     async function addItem() {
       const text = inputEl.value.trim();
       if (!text) return;
-      await supabase.from("shopping_items").insert({ text, checked: false });
+      await supabaseClient.from("shopping_items").insert({ text, checked: false });
       inputEl.value = "";
       inputEl.focus();
       await loadItems();
@@ -352,7 +352,7 @@
     });
 
     clearCheckedBtn.addEventListener("click", async () => {
-      await supabase
+      await supabaseClient
         .from("shopping_items")
         .delete()
         .eq("checked", true);
